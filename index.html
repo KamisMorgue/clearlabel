@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Clear Label</title>
+<meta name="description" content="Check UK food labels for allergens and 'may contain' warnings.">
+<meta name="theme-color" content="#0f5c55">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Clear Label">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="/icon-192.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,700&display=swap">
+<style>
+/* Layout: one narrow column, large-print app for older shoppers; verdict band dominates the result */
+:root{
+  --bg:#f3f1ec; --surface:#ffffff; --ink:#1d2a2a; --muted:#53605f; --line:#d6d3cb;
+  --accent:#0f5c55; --accent-ink:#ffffff;
+  --bad:#b3261e; --bad-bg:#fbe5e2; --warn:#8a5300; --warn-bg:#fdf0d5; --good:#1f6b35; --good-bg:#e1f2e4;
+  --f-body:"Atkinson Hyperlegible", Verdana, "Segoe UI", sans-serif;
+  --f-display:"Fraunces", Georgia, serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a1a; --surface:#1d2525; --ink:#eef2f1; --muted:#a6b3b1; --line:#334040;
+  --accent:#5cc2b5; --accent-ink:#0d1d1b;
+  --bad:#ff8a80; --bad-bg:#3a1a18; --warn:#ffc163; --warn-bg:#382a10; --good:#7fd796; --good-bg:#16301d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a1a; --surface:#1d2525; --ink:#eef2f1; --muted:#a6b3b1; --line:#334040;
+  --accent:#5cc2b5; --accent-ink:#0d1d1b;
+  --bad:#ff8a80; --bad-bg:#3a1a18; --warn:#ffc163; --warn-bg:#382a10; --good:#7fd796; --good-bg:#16301d; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:18px/1.5 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:560px;margin:0 auto;display:grid;gap:22px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font:700 1.9rem/1.1 var(--f-display);margin:0;letter-spacing:-.01em}
+h2{font:700 1.3rem/1.2 var(--f-display);margin:0;text-wrap:balance}
+p{margin:0}
+.muted{color:var(--muted)}
+button,.btn{font:700 1.05rem var(--f-body);border-radius:12px;border:2px solid var(--accent);background:var(--surface);color:var(--accent);
+  padding:14px 18px;min-height:56px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:10px;text-align:center}
+.btn.primary,button.primary{background:var(--accent);color:var(--accent-ink)}
+button:focus-visible,.btn:focus-within,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+button:disabled{opacity:.5;cursor:default}
+.link{border:none;background:none;min-height:auto;padding:6px 4px;text-decoration:underline;font-weight:700}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:16px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-weight:700;font-size:.95rem}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.actions .wide{grid-column:1/-1}
+.file{position:relative;overflow:hidden}
+.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+textarea{width:100%;min-height:96px;font:1rem/1.4 var(--f-body);padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical}
+label.opt{display:flex;gap:14px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:12px;cursor:pointer;background:var(--bg)}
+label.opt input{width:26px;height:26px;margin:2px 0 0;accent-color:var(--accent);flex:none}
+label.opt b{display:block}
+label.opt small{color:var(--muted);font-size:.9rem}
+.optlist{display:grid;gap:10px}
+.verdict{border-radius:16px;padding:22px 20px;display:grid;gap:8px;border:2px solid}
+.verdict .big{font:700 2rem/1.1 var(--f-display);text-wrap:balance}
+.v-bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.v-warn{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+.v-good{background:var(--good-bg);border-color:var(--good);color:var(--good)}
+.v-unsure{background:var(--surface);border-color:var(--line);color:var(--ink)}
+.verdict p{color:var(--ink)}
+.tag{display:inline-block;font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:6px;background:var(--bg);color:var(--muted);justify-self:start}
+.finds{display:grid;gap:10px}
+.find{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;padding:14px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.find .dot{width:16px;height:16px;border-radius:50%;margin-top:6px;grid-row:span 3}
+.find b{font-size:1.05rem}
+.find .ev{font-size:.95rem;color:var(--muted)}
+.s-contains .dot{background:var(--bad)} .s-may_contain .dot{background:var(--warn)} .s-clear .dot{background:var(--good)} .s-unclear .dot{background:var(--muted)}
+.s-contains .st{color:var(--bad)} .s-may_contain .st{color:var(--warn)} .s-clear .st{color:var(--good)}
+.st{font-weight:700}
+.alts{display:grid;gap:10px}
+.alt{padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);display:grid;gap:4px}
+.alt .where{font-size:.92rem;color:var(--muted)}
+.note{font-size:.95rem;color:var(--muted);border-left:4px solid var(--line);padding-left:12px}
+.thinking{display:flex;align-items:center;gap:14px;font-weight:700}
+.spin{width:28px;height:28px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.preview{max-height:180px;border-radius:12px;object-fit:cover;width:100%}
+.err{color:var(--bad);font-weight:700}
+.tray{display:grid;gap:12px}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.thumb{position:relative;aspect-ratio:3/4;max-width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--bg)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb button{position:absolute;top:4px;right:4px;min-height:36px;width:36px;padding:0;border-radius:50%;border:none;background:var(--surface);color:var(--ink);font-size:1.2rem}
+.cats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cats button{border-width:1px;border-color:var(--line);color:var(--ink);font-weight:700;min-height:60px;padding:10px}
+.cats button[aria-pressed="true"]{border:2px solid var(--accent);color:var(--accent)}
+.saved{font-size:.95rem;font-weight:700;color:var(--good)}
+.rec{padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);display:grid;gap:4px}
+.hist{display:grid;gap:8px}
+.hist button{justify-content:space-between;border-width:1px;border-color:var(--line);color:var(--ink);font-weight:400;min-height:52px}
+.pill{font-size:.85rem;font-weight:700;padding:2px 10px;border-radius:999px}
+.p-bad{background:var(--bad-bg);color:var(--bad)} .p-warn{background:var(--warn-bg);color:var(--warn)} .p-good{background:var(--good-bg);color:var(--good)} .p-unsure{background:var(--bg);color:var(--muted)}
+</style>
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{background:var(--bg)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+.scanner{display:grid;gap:12px}
+#reader{width:100%;max-width:100%;border-radius:14px;overflow:hidden;background:#000;min-height:220px}
+#reader video{width:100%!important;height:auto!important;display:block}
+.scanhint{font-weight:700;text-align:center}
+.prodimg{width:72px;height:72px;object-fit:contain;border-radius:10px;background:var(--surface);justify-self:start}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row input{flex:1 1 180px;min-width:0;font:1.1rem var(--f-body);padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-height:56px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Clear Label</h1>
+    <button class="link" id="editProfile" type="button">My allergies</button>
+  </header>
+
+  <!-- PASSWORD -->
+  <section id="lock" class="panel" hidden>
+    <h2>Enter the app code</h2>
+    <p class="muted">Ask the person who set up Clear Label for the code. You only need to do this once.</p>
+    <div class="row">
+      <input id="pwIn" type="password" autocomplete="current-password" aria-label="App code">
+      <button class="primary" id="pwGo" type="button">Continue</button>
+    </div>
+    <p id="pwErr" class="err" hidden>That code didn’t work. Check it and try again.</p>
+  </section>
+
+  <!-- SETUP -->
+  <section id="setup" class="panel" hidden>
+    <h2>What do you need to avoid?</h2>
+    <p class="muted">Tick everything that applies. This stays saved on this phone.</p>
+    <div class="optlist" id="allergenList"></div>
+    <label class="opt"><input type="checkbox" id="strictMay" checked>
+      <span><b>Treat “may contain” as unsafe</b><small>Recommended for allergies. Untick only if you are happy with factory traces.</small></span></label>
+    <button class="primary" id="saveProfile" type="button">Save</button>
+  </section>
+
+  <!-- CHECK -->
+  <section id="check" class="panel">
+    <div style="display:grid;gap:8px">
+      <h2>Check a product</h2>
+      <p class="muted">Scan the barcode for the fastest answer. No barcode? Take photos of the pack instead.</p>
+      <div class="chips" id="profileChips"></div>
+    </div>
+    <div class="actions">
+      <button class="primary wide" id="scanBtn" type="button">Scan barcode</button>
+    </div>
+    <div id="scanner" class="scanner" hidden>
+      <div id="reader"></div>
+      <p class="scanhint">Hold the barcode inside the box</p>
+      <button id="scanStop" type="button">Cancel</button>
+    </div>
+    <div class="actions">
+      <span class="btn file wide" id="camBtn">Take a photo of the pack
+        <input type="file" id="camIn" accept="image/*" capture="environment" aria-label="Take a photo of the pack"></span>
+    </div>
+    <div id="tray" class="tray" hidden>
+      <div class="thumbs" id="thumbs"></div>
+      <button class="primary" id="checkGo" type="button">Check this product</button>
+      <button class="link" id="clearTray" type="button">Start again</button>
+    </div>
+    <details>
+      <summary style="cursor:pointer;font-weight:700">Type a barcode, product or ingredients</summary>
+      <div style="display:grid;gap:10px;margin-top:12px">
+        <textarea id="textIn" placeholder="e.g. 5000168001142 — or Tesco Milk Chocolate Digestives — or paste the ingredients"></textarea>
+        <button id="textGo" type="button">Check this</button>
+      </div>
+    </details>
+  </section>
+
+  <!-- FIND SAFE FOODS -->
+  <section id="find" class="panel">
+    <div style="display:grid;gap:8px">
+      <h2>Find safe foods</h2>
+      <p class="muted">Pick a type of food and get UK supermarket products that suit your allergies.</p>
+    </div>
+    <div class="cats" id="cats"></div>
+    <div style="display:grid;gap:10px">
+      <label for="findIn" style="font-weight:700">Or say what you’re looking for</label>
+      <textarea id="findIn" style="min-height:64px" placeholder="e.g. a birthday cake, crisps for a party, cheese for sandwiches"></textarea>
+      <button id="findGo" type="button">Find options</button>
+    </div>
+    <div id="findOut" style="display:grid;gap:12px" aria-live="polite"></div>
+  </section>
+
+  <section id="result" style="display:grid;gap:16px" aria-live="polite"></section>
+
+  <section id="historyBox" class="panel" hidden>
+    <h2>Recently checked</h2>
+    <div class="hist" id="hist"></div>
+  </section>
+
+  <p class="note">Clear Label reads the pack for you, but it can make mistakes and recipes change. Always check the label yourself before eating. Allergens are shown in <b>bold</b> on UK packs. Barcode data comes from Open Food Facts. In an emergency call 999.</p>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
