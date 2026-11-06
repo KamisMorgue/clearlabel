@@ -92,7 +92,7 @@ function overall(findings){
 }
 const STATUS_TEXT={contains:"CONTAINS",may_contain:"MAY CONTAIN",clear:"Not listed",unclear:"Unclear"};
 const PILL={bad:"p-bad",warn:"p-warn",good:"p-good",unsure:"p-unsure"};
-const SOURCE={database:"From the barcode",label:"Read from your photo",memory:"From the product name – check the pack"};
+const SOURCE={database:"From the barcode",web:"Found on UK shop websites",label:"Read from your photo",memory:"From Claude’s knowledge – check the pack"};
 
 function renderResult(r){
   const box=$("#result");box.textContent="";
@@ -161,7 +161,7 @@ async function runCheck(body,label){
     if(r.notFound){
       box.textContent="";const p=el("div","panel");
       p.append(el("h2",null,"Barcode not found"));
-      p.append(el("p",null,"This product isn’t in the barcode database yet. Take a photo of the front and the ingredients instead – that works for any product."));
+      p.append(el("p",null,"We couldn’t find this barcode in the database or on UK shop websites. Tap “No barcode? Photograph the pack” and take photos of the front and the ingredients – that works for any product."));
       box.append(p);return;
     }
     if(!Array.isArray(r.findings))throw{code:"bad_answer"};
@@ -174,17 +174,54 @@ async function runCheck(body,label){
   }finally{busy=false;setBusy(false)}
 }
 
-// ---------- barcode scanner ----------
+// ---------- barcode from a photo (main way: the iPhone camera focuses properly) ----------
+const FORMATS=()=>[Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E];
+function canvasFrom(img,maxSide,rotate){
+  const s=Math.min(1,maxSide/Math.max(img.width,img.height));
+  const w=Math.round(img.width*s),h=Math.round(img.height*s);
+  const c=document.createElement("canvas");
+  if(rotate){c.width=h;c.height=w;const x=c.getContext("2d");x.translate(h/2,w/2);x.rotate(Math.PI/2);x.drawImage(img,-w/2,-h/2,w,h)}
+  else{c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h)}
+  return c;
+}
+const toFile=c=>new Promise(ok=>c.toBlob(b=>ok(new File([b],"scan.jpg",{type:"image/jpeg"})),"image/jpeg",0.92));
+async function decodeBarcode(file){
+  // 1) the phone's own barcode reader where it has one
+  const img=await new Promise((ok,bad)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=bad;i.src=URL.createObjectURL(file)});
+  if("BarcodeDetector" in window){
+    try{const d=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e"]});const r=await d.detect(img);if(r[0]?.rawValue)return r[0].rawValue}catch{}
+  }
+  // 2) the scanning library, at a few sizes and both ways round (barcodes are often sideways)
+  if(!window.Html5Qrcode)return null;
+  const reader=new Html5Qrcode("fileReader",{formatsToSupport:FORMATS(),verbose:false});
+  for(const [size,rot] of [[1600,false],[2400,false],[1000,false],[1600,true],[2400,true]]){
+    try{const code=await reader.scanFile(await toFile(canvasFrom(img,size,rot)),false);if(code)return code}catch{}
+  }
+  return null;
+}
+$("#barcodeIn").onchange=async e=>{
+  const f=e.target.files?.[0];e.target.value="";if(!f||busy)return;
+  const box=$("#result");thinking(box,"Reading the barcode…");box.scrollIntoView({behavior:"smooth",block:"start"});
+  let code=null;try{code=await decodeBarcode(f)}catch{}
+  if(code){runCheck({mode:"barcode",barcode:code},"Looking up barcode "+code+"… this can take up to 30 seconds");return}
+  // Couldn't read the stripes: let Claude look at the photo instead (it can read the numbers or the packaging).
+  try{runCheck({mode:"image",images:[await shrink(f)]},"Reading your photo…")}catch{box.textContent=""}
+};
+
+// ---------- live scanner (optional) ----------
 let scanner=null;
 async function startScan(){
   if(busy)return;
   if(!window.Html5Qrcode){alert("The scanner didn’t load. Check your internet and reopen the app.");return}
-  $("#scanner").hidden=false;$("#scanBtn").hidden=true;
-  scanner=new Html5Qrcode("reader",{formatsToSupport:[
-    Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E],verbose:false});
+  $("#scanner").hidden=false;$("#scanBtn").hidden=true;$("#snapBtn").hidden=true;
+  scanner=new Html5Qrcode("reader",{formatsToSupport:FORMATS(),verbose:false,
+    experimentalFeatures:{useBarCodeDetectorIfSupported:true}});
   try{
-    await scanner.start({facingMode:"environment"},{fps:10,qrbox:(w,h)=>({width:Math.min(300,w*0.85),height:Math.min(150,h*0.5)})},
-      async code=>{if(navigator.vibrate)navigator.vibrate(80);await stopScan();runCheck({mode:"barcode",barcode:code},"Looking up barcode "+code+"…")},()=>{});
+    await scanner.start(
+      {facingMode:"environment"},
+      {fps:15,qrbox:(w,h)=>({width:Math.floor(w*0.9),height:Math.floor(Math.min(h*0.45,w*0.5))}),
+       videoConstraints:{facingMode:"environment",width:{ideal:1920},height:{ideal:1080},advanced:[{focusMode:"continuous"}]}},
+      async code=>{if(navigator.vibrate)navigator.vibrate(80);await stopScan();runCheck({mode:"barcode",barcode:code},"Looking up barcode "+code+"… this can take up to 30 seconds")},()=>{});
   }catch{
     await stopScan();
     const box=$("#result");box.textContent="";const p=el("div","panel");
@@ -193,7 +230,7 @@ async function startScan(){
 }
 async function stopScan(){
   if(scanner){try{if(scanner.isScanning)await scanner.stop();scanner.clear()}catch{}scanner=null}
-  $("#scanner").hidden=true;$("#scanBtn").hidden=false;
+  $("#scanner").hidden=true;$("#scanBtn").hidden=false;$("#snapBtn").hidden=false;
 }
 $("#scanBtn").onclick=startScan;$("#scanStop").onclick=stopScan;
 

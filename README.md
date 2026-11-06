@@ -49,6 +49,7 @@ Do the same on your mum's phone (text her the web address and the code).
 
 - **Who can use it:** only people with your `APP_PASSWORD`. Change it in Vercel → your project → Settings → Environment Variables, then Redeploy.
 - **How much it can cost:** your monthly spend limit at console.anthropic.com. You can see exactly what's been used there too.
+- **Web lookups:** when a product isn't fully in the barcode database, Claude searches UK supermarket sites (about 1p per search, max 3 per check). Change the max with a `MAX_SEARCHES` environment variable, or switch it off with `WEB_SEARCH` = `off`.
 - **Free extras:** barcode lookups (Open Food Facts) are free, and "Find safe foods" answers are reused on the phone for a week, so repeat taps cost nothing.
 
 ## How it works

@@ -152,15 +152,18 @@ img{max-width:100%}
       <div class="chips" id="profileChips"></div>
     </div>
     <div class="actions">
-      <button class="primary wide" id="scanBtn" type="button">Scan barcode</button>
+      <span class="btn primary file wide" id="snapBtn">Scan barcode
+        <input type="file" id="barcodeIn" accept="image/*" capture="environment" aria-label="Take a photo of the barcode"></span>
     </div>
+    <p class="muted" style="font-size:.95rem">Point the camera at the barcode, get it sharp, and take the photo.</p>
+    <div id="fileReader" hidden></div>
     <div id="scanner" class="scanner" hidden>
       <div id="reader"></div>
-      <p class="scanhint">Hold the barcode inside the box</p>
+      <p class="scanhint">Hold the barcode flat inside the box, about a hand’s width away</p>
       <button id="scanStop" type="button">Cancel</button>
     </div>
     <div class="actions">
-      <span class="btn file wide" id="camBtn">Take a photo of the pack
+      <span class="btn file wide" id="camBtn">No barcode? Photograph the pack
         <input type="file" id="camIn" accept="image/*" capture="environment" aria-label="Take a photo of the pack"></span>
     </div>
     <div id="tray" class="tray" hidden>
@@ -168,6 +171,7 @@ img{max-width:100%}
       <button class="primary" id="checkGo" type="button">Check this product</button>
       <button class="link" id="clearTray" type="button">Start again</button>
     </div>
+    <button class="link" id="scanBtn" type="button">Use the live scanner instead</button>
     <details>
       <summary style="cursor:pointer;font-weight:700">Type a barcode, product or ingredients</summary>
       <div style="display:grid;gap:10px;margin-top:12px">
